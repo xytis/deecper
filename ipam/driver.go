@@ -10,14 +10,10 @@ import (
 	. "github.com/xytis/deecper/common"
 )
 
-const (
-	WeaveContainer = "weave"
-)
-
 type ipam struct {
 }
 
-func NewIpam(version string) (ipamapi.Ipam, error) {
+func New(version string) (ipamapi.Ipam, error) {
 	return &ipam{}, nil
 }
 
@@ -30,7 +26,7 @@ func (i *ipam) RequestPool(addressSpace, pool, subPool string, options map[strin
 	Log.Debugln("RequestPool", addressSpace, pool, subPool, options)
 	defer func() { Log.Debugln("RequestPool returning", poolname, subnet, data, err) }()
 	if pool == "" {
-		//subnet, err = i.weave.DefaultSubnet()
+		_, subnet, err = net.ParseCIDR("172.13.0.1/24")
 	} else {
 		_, subnet, err = net.ParseCIDR(pool)
 	}
@@ -44,7 +40,7 @@ func (i *ipam) RequestPool(addressSpace, pool, subPool string, options map[strin
 		}
 	}
 	// Cunningly-constructed pool "name" which gives us what we need later
-	poolname = strings.Join([]string{"weave", subnet.String(), iprange.String()}, "-")
+	poolname = strings.Join([]string{"deecper", subnet.String(), iprange.String()}, "-")
 	// Pass back a fake "gateway address"; we don't actually use it,
 	// so just give the network address.
 	data = map[string]string{netlabel.Gateway: subnet.String()}
@@ -59,13 +55,8 @@ func (i *ipam) ReleasePool(poolID string) error {
 func (i *ipam) RequestAddress(poolID string, address net.IP, options map[string]string) (ip *net.IPNet, _ map[string]string, err error) {
 	Log.Debugln("RequestAddress", poolID, address, options)
 	defer func() { Log.Debugln("allocateIP returned", ip, err) }()
-	// If we pass magic string "_" to weave IPAM it stores the address under its own string
-	if poolID == "weavepool" { // old-style
-		//ip, err = i.weave.AllocateIP("_")
-		return
-	}
 	parts := strings.Split(poolID, "-")
-	if len(parts) != 3 || parts[0] != "weave" {
+	if len(parts) != 3 || parts[0] != "deecper" {
 		err = fmt.Errorf("Unrecognized pool ID: %s", poolID)
 		return
 	}
