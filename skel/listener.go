@@ -234,7 +234,7 @@ func (listener *listenerIpam) requestPool(w http.ResponseWriter, r *http.Request
 	if err := decode(w, r, &rq); err != nil {
 		return
 	}
-	Log.Debugln("Poll requested", rq)
+	Log.Debugln("Pool requested", rq)
 	poolID, pool, data, err := listener.i.RequestPool(rq.AddressSpace, rq.Pool, rq.SubPool, rq.Options, rq.V6)
 	if err != nil {
 		errorResponse(w, err.Error())
