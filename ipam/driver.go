@@ -52,8 +52,13 @@ func (i *ipam) ReleasePool(poolID string) error {
 	return nil
 }
 
-func (i *ipam) RequestAddress(poolID string, address net.IP, options map[string]string) (ip *net.IPNet, _ map[string]string, err error) {
+func (i *ipam) RequestAddress(poolID string, address net.IP, options map[string]string) (ip *net.IPNet, ret_options map[string]string, err error) {
 	Log.Debugln("RequestAddress", poolID, address, options)
+	macAddr, err := net.ParseMAC(options[netlabel.MacAddress])
+	if err != nil {
+		err = fmt.Errorf("Mac address not understood %v", options[netlabel.MacAddress])
+		return
+	}
 	defer func() { Log.Debugln("allocateIP returned", ip, err) }()
 	parts := strings.Split(poolID, "-")
 	if len(parts) != 3 || parts[0] != "deecper" {
@@ -68,11 +73,15 @@ func (i *ipam) RequestAddress(poolID string, address net.IP, options map[string]
 		return
 	}
 	// We are lying slightly to IPAM here: the range is not a subnet
-	Log.Debugln(iprange)
+	Log.Debugln(macAddr, iprange, subnet.Mask)
 	//if ip, err = i.weave.AllocateIPInSubnet("_", iprange); err != nil {
 	//	return
 	//}
+	_, ip, err = net.ParseCIDR("172.13.0.84/24")
 	ip.Mask = subnet.Mask // fix up the subnet we lied about
+	ret_options = make(map[string]string)
+	ret_options["ohay"] = "Good day to you too, sir!"
+	Log.Debugln("Response", ip, ret_options, err)
 	return
 }
 

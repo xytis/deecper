@@ -85,7 +85,7 @@ func handshake(w http.ResponseWriter, r *http.Request) {
 
 func (listener *listenerNetwork) getCapabilities(w http.ResponseWriter, r *http.Request) {
 	var caps = &dapi.GetCapabilityResponse{
-		Scope: "local",
+		Scope: "global",
 	}
 	objectOrErrorResponse(w, caps, nil)
 }
