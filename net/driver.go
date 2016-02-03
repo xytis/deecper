@@ -2,7 +2,7 @@ package plugin
 
 import (
 	"errors"
-	"github.com/docker/libnetwork/driverapi"
+	driverapi "github.com/docker/go-plugins-helpers/network"
 	"github.com/docker/libnetwork/netlabel"
 
 	. "github.com/xytis/deecper/common"
@@ -16,153 +16,123 @@ const (
 )
 
 type driver struct {
-	dhcpserver string
-	version    string
-	networks   networks
+	scope    string
+	networks networks
 }
 
-func New(version string, dhcpserver string) (driverapi.Driver, error) {
+func NewDriver(scope string) (driverapi.Driver, error) {
 	driver := &driver{
-		dhcpserver: dhcpserver,
-		version:    version,
-		networks:   networksNew(),
+		scope:    scope,
+		networks: networksNew(),
 	}
 
 	return driver, nil
 }
 
-// === INTERFACE ===
+func (driver *driver) GetCapabilities() (res *driverapi.CapabilitiesResponse, err error) {
+	res = &driverapi.CapabilitiesResponse{
+		Scope: driver.scope,
+	}
+	return
+}
 
-// CreateNetwork invokes the driver method to create a network passing
-// the network id and network specific config. The config mechanism will
-// eventually be replaced with labels which are yet to be introduced.
-func (driver *driver) CreateNetwork(nid string, options map[string]interface{}, ipV4Data, ipV6Data []driverapi.IPAMData) error {
-	Log.Debugf("Create network request %s %+v", nid, options)
+func (driver *driver) CreateNetwork(rq *driverapi.CreateNetworkRequest) error {
+	Log.Debugf("Create network request %s %+v", rq.NetworkID, rq.Options)
+	Log.Debugf("IPAM datas %v | %v", rq.IPv4Data, rq.IPv6Data)
 	var (
 		ifname string
 		brname string
+		labels map[string]interface{}
+		ok     bool
 	)
-	if args, ok := options[netlabel.GenericData].(map[string]interface{}); !ok {
+	if labels, ok = rq.Options[netlabel.GenericData].(map[string]interface{}); !ok {
 		return ErrMissingParameterMap{}
-	} else {
-		if ifname, ok = args["iface"].(string); !ok || ifname == "" {
-			return ErrMissingParam("iface")
-		}
-		if brname, ok = args["bridge"].(string); !ok {
-			brname = "br_" + ifname
-		}
 	}
-	return driver.networks.create(nid, ifname, brname)
+	if ifname, ok = labels["iface"].(string); !ok || ifname == "" {
+		return ErrMissingParam("iface")
+	}
+	if brname, ok = labels["bridge"].(string); !ok {
+		brname = "br_" + ifname
+	}
+	config := networkConfig{
+		ParentName: ifname,
+		BridgeName: brname,
+		Mtu:        1500, //????
+		EnableIPv6: false,
+	}
+	if err := config.parseIPAM(rq.NetworkID, rq.IPv4Data, rq.IPv6Data); err != nil {
+		return err
+	}
+	if err := config.parseLabels(labels); err != nil {
+		return err
+	}
+	if config.EnableIPv6 {
+		Log.Warnf("IPV6 not supported. Go code it yourself!")
+	}
+	return driver.networks.create(rq.NetworkID, config)
 }
 
-// DeleteNetwork invokes the driver method to delete network passing
-// the network id.
-func (driver *driver) DeleteNetwork(nid string) error {
-	Log.Debugf("Delete network request %s", nid)
-	return driver.networks.delete(nid)
+func (driver *driver) DeleteNetwork(rq *driverapi.DeleteNetworkRequest) error {
+	Log.Debugf("Delete network request %s", rq.NetworkID)
+	return driver.networks.delete(rq.NetworkID)
 }
 
-// CreateEndpoint invokes the driver method to create an endpoint
-// passing the network id, endpoint id endpoint information and driver
-// specific config. The endpoint information can be either consumed by
-// the driver or populated by the driver. The config mechanism will
-// eventually be replaced with labels which are yet to be introduced.
-func (driver *driver) CreateEndpoint(nid, eid string, ifInfo driverapi.InterfaceInfo, options map[string]interface{}) error {
-	Log.Debugf("Create endpoint request %s:%s", nid, eid)
-	if ifInfo == nil {
+func (driver *driver) CreateEndpoint(rq *driverapi.CreateEndpointRequest) error {
+	Log.Debugf("Create endpoint request %s:%s", rq.NetworkID, rq.EndpointID)
+	if rq.Interface == nil {
 		return errors.New("invalid interface info passed")
 	}
 
 	// Get the network handler and make sure it exists
-	ni, err := driver.networks.get(nid)
+	ni, err := driver.networks.get(rq.NetworkID)
 	if err != nil {
 		return err
 	}
-	if err := ni.endpoints.vacant(eid); err != nil {
+	if err := ni.endpoints.vacant(rq.EndpointID); err != nil {
 		return err
 	}
 
-	return ni.endpoints.create(eid, ifInfo, ni.config)
+	return ni.endpoints.create(rq.EndpointID, rq.Interface, ni.config)
 }
 
-// DeleteEndpoint invokes the driver method to delete an endpoint
-// passing the network id and endpoint id.
-func (driver *driver) DeleteEndpoint(nid, eid string) error {
-	Log.Debugf("Delete endpoint request %s:%s", nid, eid)
-	ni, err := driver.networks.get(nid)
+func (driver *driver) DeleteEndpoint(rq *driverapi.DeleteEndpointRequest) error {
+	Log.Debugf("Delete endpoint request %s:%s", rq.NetworkID, rq.EndpointID)
+	ni, err := driver.networks.get(rq.NetworkID)
 	if err != nil {
 		return err
 	}
-	return ni.endpoints.delete(eid)
+	return ni.endpoints.delete(rq.EndpointID)
 }
 
-// EndpointOperInfo retrieves from the driver the operational data related to the specified endpoint
-func (driver *driver) EndpointOperInfo(nid, eid string) (map[string]interface{}, error) {
-	return nil, nil
+func (driver *driver) EndpointInfo(rq *driverapi.InfoRequest) (res *driverapi.InfoResponse, err error) {
+	Log.Debugf("Info requested %s:%s", rq.NetworkID, rq.EndpointID)
+	return
 }
 
-// Join method is invoked when a Sandbox is attached to an endpoint.
-func (driver *driver) Join(nid, eid string, sboxKey string, jinfo driverapi.JoinInfo, options map[string]interface{}) error {
-	Log.Debugf("Join requested %s:%s, sbox:%s", nid, eid, sboxKey)
+func (driver *driver) Join(rq *driverapi.JoinRequest) (res *driverapi.JoinResponse, err error) {
+	Log.Debugf("Join requested %s:%s, sbox:%s", rq.NetworkID, rq.EndpointID, rq.SandboxKey)
+	defer func() { Log.Debugf("Join response: res: %v, err: %v", res, err) }()
 
-	ni, err := driver.networks.get(nid)
+	ni, err := driver.networks.get(rq.NetworkID)
 	if err != nil {
-		return err
+		return
 	}
 
-	ep, err := ni.endpoints.get(eid)
+	ep, err := ni.endpoints.get(rq.EndpointID)
 	if err != nil {
-		return err
+		return
 	}
 
-	iNames := jinfo.InterfaceName()
-	err = iNames.SetNames(ep.ifname, containerVethPrefix)
-	if err != nil {
-		return err
+	res = &driverapi.JoinResponse{
+		Gateway:       ni.config.GatewayIPv4.String(),
+		InterfaceName: driverapi.InterfaceName{ep.ifname, containerVethPrefix},
 	}
-	/*
-		err = jinfo.SetGateway(ni.bridge.gatewayIPv4)
-		if err != nil {
-			return err
-		}
 
-		err = jinfo.SetGatewayIPv6(network.bridge.gatewayIPv6)
-		if err != nil {
-			return err
-		}
+	return
+}
 
-		if !network.config.EnableICC {
-			return d.link(network, endpoint, options, true)
-		}
-	*/
+func (driver *driver) Leave(rq *driverapi.LeaveRequest) error {
+	Log.Debugf("Leave requested %s:%s", rq.NetworkID, rq.EndpointID)
 
 	return nil
-}
-
-// Leave method is invoked when a Sandbox detaches from an endpoint.
-func (driver *driver) Leave(nid, eid string) error {
-
-	return nil
-}
-
-// DiscoverNew is a notification for a new discovery event, Example:a new node joining a cluster
-func (driver *driver) DiscoverNew(dType driverapi.DiscoveryType, data interface{}) error {
-	return nil
-}
-
-// DiscoverDelete is a notification for a discovery delete event, Example:a node leaving a cluster
-func (driver *driver) DiscoverDelete(dType driverapi.DiscoveryType, data interface{}) error {
-	return nil
-}
-
-// Type returns the the type of this driver, the network type this driver manages
-func (driver *driver) Type() string {
-	return networkType
-}
-
-// === PRIVATE ===
-
-func (driver *driver) lock() {
-}
-func (driver *driver) unlock() {
 }

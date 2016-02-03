@@ -2,7 +2,7 @@ package plugin
 
 import (
 	"fmt"
-	"github.com/docker/libnetwork/driverapi"
+	driverapi "github.com/docker/go-plugins-helpers/network"
 	"github.com/docker/libnetwork/netutils"
 	"github.com/docker/libnetwork/types"
 	"github.com/vishvananda/netlink"
@@ -29,9 +29,8 @@ func endpointsNew() endpoints {
 	}
 }
 
-func (e *endpoints) create(eid string, ifInfo driverapi.InterfaceInfo, niConfig networkConfiguration) (err error) {
+func (e *endpoints) create(eid string, ifInfo *driverapi.EndpointInterface, niConfig networkConfig) (err error) {
 	ep := endpoint{}
-	defer func() { Log.Debugf("endpoint create eid: %s, ep: %v, error: %s", eid, ep, err) }()
 
 	// Generate a name for what will be the host side pipe interface
 	hostIfName, err := netutils.GenerateIfaceName(vethPrefix, vethLen)
@@ -98,25 +97,31 @@ func (e *endpoints) create(eid string, ifInfo driverapi.InterfaceInfo, niConfig 
 
 	// Create the sandbox side pipe interface
 	ep.ifname = containerIfName
-	ep.mac = ifInfo.MacAddress()
-	ep.addr = ifInfo.Address()
-	ep.addrv6 = ifInfo.AddressIPv6()
-
-	// Down the interface before configuring mac address.
-	if err = netlink.LinkSetDown(sbox); err != nil {
-		return fmt.Errorf("could not set link down for container interface %s: %v", containerIfName, err)
-	}
-
-	// Set the sbox's MAC. If specified, use the one configured by user, otherwise generate one based on IP.
-	if ep.mac == nil {
-		ep.mac = netutils.GenerateMACFromIP(ep.addr.IP)
-		if err := ifInfo.SetMacAddress(ep.mac); err != nil {
-			return err
-		}
-	}
-	err = netlink.LinkSetHardwareAddr(sbox, ep.mac)
+	_, ep.addr, err = net.ParseCIDR(ifInfo.Address)
 	if err != nil {
-		return fmt.Errorf("could not set mac address for container interface %s: %v", containerIfName, err)
+		return fmt.Errorf("ipv4 adress unparseable")
+	}
+	/*
+		_, ep.addrv6, err = net.ParseCIDR(ifInfo.AddressIPv6)
+		if err != nil {
+			return fmt.Errorf("ipv6 adress unparseable")
+		}
+	*/
+
+	if ifInfo.MacAddress != "" {
+		ep.mac, err = net.ParseMAC(ifInfo.MacAddress)
+		if err != nil {
+			return fmt.Errorf("mac adress unparseable")
+		}
+		// Down the interface before configuring mac address.
+		if err = netlink.LinkSetDown(sbox); err != nil {
+			return fmt.Errorf("could not set link down for container interface %s: %v", containerIfName, err)
+		}
+
+		err = netlink.LinkSetHardwareAddr(sbox, ep.mac)
+		if err != nil {
+			return fmt.Errorf("could not set mac address for container interface %s: %v", containerIfName, err)
+		}
 	}
 
 	// Up the host interface after finishing all netlink configuration
@@ -150,7 +155,7 @@ func (e *endpoints) delete(eid string) (err error) {
 
 	// Also make sure defer does not see this error either.
 	if link, err := netlink.LinkByName(ep.ifname); err == nil {
-		netlink.LinkDel(link)
+		return netlink.LinkDel(link)
 	}
 
 	return
@@ -167,7 +172,7 @@ func (e *endpoints) vacant(eid string) error {
 	_, ok := e.store[eid]
 	e.RUnlock()
 	if ok {
-		return driverapi.ErrEndpointExists(eid)
+		return ErrEndpointExists(eid)
 	}
 	return nil
 }
@@ -177,7 +182,7 @@ func (e *endpoints) get(eid string) (endpoint, error) {
 	ep, ok := e.store[eid]
 	e.RUnlock()
 	if !ok {
-		return endpoint{}, driverapi.ErrNoNetwork(eid)
+		return endpoint{}, ErrNoEndpoint(eid)
 	}
 	return ep, nil
 }

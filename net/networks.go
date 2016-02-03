@@ -1,10 +1,13 @@
 package plugin
 
 import (
-	"github.com/docker/libnetwork/driverapi"
+	driverapi "github.com/docker/go-plugins-helpers/network"
+	"github.com/docker/libnetwork/netlabel"
+	"github.com/docker/libnetwork/types"
 	"github.com/vishvananda/netlink"
 	. "github.com/xytis/deecper/common"
 	"net"
+	"strconv"
 	"sync"
 )
 
@@ -14,24 +17,22 @@ type networks struct {
 }
 
 type network struct {
-	brname    string
 	endpoints endpoints
-	config    networkConfiguration
+	config    networkConfig
 }
 
-type networkConfiguration struct {
-	ID         string
+type networkConfig struct {
+	ParentName string
 	BridgeName string
-	EnableIPv6 bool
 	Mtu        int
+	EnableIPv6 bool
 	// Internal fields set after ipam data parsing
-	AddressIPv4        *net.IPNet
-	AddressIPv6        *net.IPNet
-	DefaultGatewayIPv4 net.IP
-	DefaultGatewayIPv6 net.IP
-	dbIndex            uint64
-	dbExists           bool
-	Internal           bool
+	GatewayIPv4 net.IP
+	GatewayIPv6 net.IP
+	// Other stuff
+	dbIndex  uint64
+	dbExists bool
+	Internal bool
 }
 
 func networksNew() networks {
@@ -40,25 +41,23 @@ func networksNew() networks {
 	}
 }
 
-func networkNew(brname string, config networkConfiguration) network {
+func networkNew(config networkConfig) network {
 	return network{
-		brname:    brname,
 		endpoints: endpointsNew(),
 		config:    config,
 	}
 }
 
-func (n *networks) create(nid, ifname, brname string) (err error) {
-	defer func() { Log.Debugf("network create nid: %s, bridge: %s, error: %s", nid, brname, err) }()
+func (n *networks) create(nid string, config networkConfig) (err error) {
 	la := netlink.NewLinkAttrs()
-	la.Name = brname
+	la.Name = config.BridgeName
 	br := &netlink.Bridge{la}
 	if err := netlink.LinkAdd(br); err != nil {
 		return ErrNetlinkError{"create bridge", err}
 	}
-	if li, err := netlink.LinkByName(ifname); err != nil {
+	if li, err := netlink.LinkByName(config.ParentName); err != nil {
 		netlink.LinkDel(br)
-		return ErrNetlinkError{"find iface by name (" + ifname + ")", err}
+		return ErrNetlinkError{"find iface by name (" + config.ParentName + ")", err}
 	} else if err := netlink.LinkSetMaster(li, br); err != nil {
 		netlink.LinkDel(br)
 		return ErrNetlinkError{"set bridge master", err}
@@ -67,16 +66,7 @@ func (n *networks) create(nid, ifname, brname string) (err error) {
 		return ErrNetlinkError{"bring bridge up", err}
 	}
 
-	n.add(nid, network{
-		brname,
-		endpointsNew(),
-		networkConfiguration{
-			ID:         nid,
-			BridgeName: brname,
-			EnableIPv6: false,
-			//Mtu: ????,
-		},
-	})
+	n.add(nid, network{endpointsNew(), config})
 
 	return
 }
@@ -87,7 +77,7 @@ func (n *networks) delete(nid string) error {
 		return err
 	}
 	la := netlink.NewLinkAttrs()
-	la.Name = ni.brname
+	la.Name = ni.config.BridgeName
 	br := &netlink.Bridge{la}
 	if err := netlink.LinkSetDown(br); err != nil {
 		return ErrNetlinkError{"bring bridge down", err}
@@ -110,7 +100,7 @@ func (n *networks) get(nid string) (network, error) {
 	ni, ok := n.store[nid]
 	n.RUnlock()
 	if !ok {
-		return network{}, driverapi.ErrNoNetwork(nid)
+		return network{}, ErrNoNetwork(nid)
 	}
 	return ni, nil
 }
@@ -119,4 +109,49 @@ func (n *networks) rm(nid string) {
 	n.RLock()
 	delete(n.store, nid)
 	n.RUnlock()
+}
+
+func (c *networkConfig) parseIPAM(id string, ipamV4Data, ipamV6Data []*driverapi.IPAMData) error {
+	if len(ipamV4Data) > 1 || len(ipamV6Data) > 1 {
+		return types.ForbiddenErrorf("bridge driver doesni't support multiple subnets")
+	}
+
+	if len(ipamV4Data) == 0 {
+		return types.BadRequestErrorf("bridge network %s requires ipv4 configuration", id)
+	}
+
+	if ipamV4Data[0].Gateway == "" {
+		return types.BadRequestErrorf("bridge network %s requires ipv4 gateway from IPAM", id)
+	}
+	if gw, _, err := net.ParseCIDR(ipamV4Data[0].Gateway); err != nil {
+		return err
+	} else {
+		Log.Debugf("IPAM: %v", *ipamV4Data[0])
+		c.GatewayIPv4 = gw
+	}
+
+	return nil
+}
+
+func (c *networkConfig) parseLabels(labels map[string]interface{}) error {
+	var err error
+	for label, tlval := range labels {
+		value := tlval.(string)
+		switch label {
+		case netlabel.DriverMTU:
+			if c.Mtu, err = strconv.Atoi(value); err != nil {
+				return parseErr(label, value, err.Error())
+			}
+		case netlabel.EnableIPv6:
+			if c.EnableIPv6, err = strconv.ParseBool(value); err != nil {
+				return parseErr(label, value, err.Error())
+			}
+		}
+	}
+
+	return nil
+}
+
+func parseErr(label, value, errString string) error {
+	return types.BadRequestErrorf("failed to parse %s value: %v (%s)", label, value, errString)
 }

@@ -1,88 +1,100 @@
 package main
 
 import (
-	"flag"
-	"fmt"
-	"net"
 	"os"
 
-	"github.com/docker/libnetwork/driverapi"
-	"github.com/docker/libnetwork/ipamapi"
+	"github.com/codegangsta/cli"
+	"github.com/docker/go-plugins-helpers/ipam"
+	"github.com/docker/go-plugins-helpers/network"
 	. "github.com/xytis/deecper/common"
-	ipamplugin "github.com/xytis/deecper/ipam"
-	netplugin "github.com/xytis/deecper/net"
-	"github.com/xytis/deecper/skel"
+	dipam "github.com/xytis/deecper/ipam"
+	dnet "github.com/xytis/deecper/net"
 )
 
 var version = "(unreleased version)"
 
 func main() {
-	var (
-		justVersion bool
-		socket      string
-		dhcpserver  string
-		logLevel    string
-		err         error
-	)
 
-	flag.BoolVar(&justVersion, "version", false, "print version and exit")
-	flag.StringVar(&logLevel, "log-level", "info", "logging level (debug, info, warning, error)")
-	flag.StringVar(&socket, "socket", "/run/docker/plugins/deecper.sock", "socket on which to listen")
-	flag.StringVar(&dhcpserver, "server", "127.0.0.1", "dhcp server to relay queries to")
-
-	flag.Parse()
-
-	if justVersion {
-		fmt.Printf("deecper plugin %s\n", version)
-		os.Exit(0)
+	var flagLogLevel = cli.StringFlag{
+		Name:  "log-level",
+		Value: "info",
+		Usage: "logging level (debug, info, warning, error)",
 	}
 
-	SetLogLevel(logLevel)
-
-	Log.Println("Deecper plugin", version, "Command line options:", os.Args[1:])
-
-	endChan := make(chan error, 1)
-	if socket != "" {
-		globalListener, err := listenAndServe(socket, dhcpserver, endChan)
-		if err != nil {
-			Log.Fatalf("unable to create driver: %s", err)
-		}
-		defer globalListener.Close()
+	var flagNoIPAM = cli.BoolFlag{
+		Name:  "no-ipam",
+		Usage: "Disable IPAM plugin",
 	}
 
-	err = <-endChan
-	if err != nil {
-		Log.Errorf("Error from listener: %s", err)
-		os.Exit(1)
+	var flagNoNet = cli.BoolFlag{
+		Name:  "no-network",
+		Usage: "Disable Network plugin",
 	}
+
+	var flagScope = cli.StringFlag{
+		Name:  "scope",
+		Value: "global",
+		Usage: "Driver scope",
+	}
+
+	app := cli.NewApp()
+	app.Name = "deecper"
+	app.Usage = "Docker dhcp enabled Networking"
+	app.Version = version
+	app.Flags = []cli.Flag{
+		flagLogLevel,
+		flagNoIPAM,
+		flagNoNet,
+		flagScope,
+	}
+
+	app.Action = Run
+	app.Run(os.Args)
+
 }
 
-func listenAndServe(socket string, dhcpserver string, endChan chan<- error) (net.Listener, error) {
-	var i ipamapi.Ipam
-	var d driverapi.Driver
-	var err error
-	if i, err = ipamplugin.New(version); err != nil {
-		return nil, err
-	}
-	if d, err = netplugin.New(version, dhcpserver); err != nil {
-		return nil, err
+func Run(ctx *cli.Context) {
+	SetLogLevel(ctx.String("log-level"))
+
+	var (
+		derr, ierr chan error
+	)
+
+	if !ctx.Bool("no-network") {
+		d, err := dnet.NewDriver(ctx.String("scope"))
+		if err != nil {
+			panic(err)
+		}
+		h := network.NewHandler(d)
+		derr = make(chan error)
+		go func() {
+			derr <- h.ServeUnix("root", "dnet")
+		}()
+		Log.Infof("Running Driver plugin 'dnet'")
 	}
 
-	var listener net.Listener
-
-	// remove sockets from last invocation
-	if err := os.Remove(socket); err != nil && !os.IsNotExist(err) {
-		return nil, err
+	if !ctx.Bool("no-ipam") {
+		i, err := dipam.NewIpam()
+		if err != nil {
+			panic(err)
+		}
+		h := ipam.NewHandler(i)
+		ierr = make(chan error)
+		go func() {
+			ierr <- h.ServeUnix("root", "dhcp")
+		}()
+		Log.Infof("Running IPAM plugin 'dhcp'")
 	}
-	listener, err = net.Listen("unix", socket)
-	if err != nil {
-		return nil, err
+
+	if derr == nil && ierr == nil {
+		Log.Errorf("You started the daemon without anything to do")
+		os.Exit(127)
 	}
-	Log.Printf("Listening on %s", socket)
 
-	go func() {
-		endChan <- skel.Listen(listener, d, i)
-	}()
-
-	return listener, nil
+	select {
+	case err := <-derr:
+		panic(err)
+	case err := <-ierr:
+		panic(err)
+	}
 }
