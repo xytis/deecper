@@ -2,8 +2,8 @@ package plugin
 
 import (
 	"errors"
-	driverapi "github.com/docker/go-plugins-helpers/network"
 	"github.com/docker/libnetwork/netlabel"
+	driverapi "github.com/xytis/go-plugins-helpers/network"
 
 	. "github.com/xytis/deecper/common"
 )

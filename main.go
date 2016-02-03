@@ -4,11 +4,11 @@ import (
 	"os"
 
 	"github.com/codegangsta/cli"
-	"github.com/docker/go-plugins-helpers/ipam"
-	"github.com/docker/go-plugins-helpers/network"
 	. "github.com/xytis/deecper/common"
 	dipam "github.com/xytis/deecper/ipam"
 	dnet "github.com/xytis/deecper/net"
+	"github.com/xytis/go-plugins-helpers/ipam"
+	"github.com/xytis/go-plugins-helpers/network"
 )
 
 var version = "(unreleased version)"

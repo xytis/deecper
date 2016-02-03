@@ -6,9 +6,9 @@ import (
 	"strings"
 
 	client "github.com/d2g/dhcp4client"
-	ipamapi "github.com/docker/go-plugins-helpers/ipam"
 	"github.com/docker/libnetwork/netlabel"
 	. "github.com/xytis/deecper/common"
+	ipamapi "github.com/xytis/go-plugins-helpers/ipam"
 )
 
 const (
