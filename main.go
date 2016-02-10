@@ -4,11 +4,11 @@ import (
 	"os"
 
 	"github.com/codegangsta/cli"
-	. "github.com/xytis/deecper/common"
-	dipam "github.com/xytis/deecper/ipam"
-	dnet "github.com/xytis/deecper/net"
-	"github.com/xytis/go-plugins-helpers/ipam"
-	"github.com/xytis/go-plugins-helpers/network"
+	"github.com/docker/go-plugins-helpers/ipam"
+	"github.com/docker/go-plugins-helpers/network"
+	. "github.com/xytis/polyp/common"
+	dipam "github.com/xytis/polyp/ipam"
+	dnet "github.com/xytis/polyp/net"
 )
 
 var version = "(unreleased version)"
@@ -34,7 +34,7 @@ func main() {
 	var flagClusterStore = cli.StringFlag{
 		Name:  "cluster-store, s",
 		Value: "consul://127.0.0.1:8500",
-		Usage: "cluster store for shared deecper data",
+		Usage: "cluster store for shared polyp data",
 	}
 
 	var flagInterface = cli.StringFlag{
@@ -44,7 +44,7 @@ func main() {
 	}
 
 	app := cli.NewApp()
-	app.Name = "deecper"
+	app.Name = "polyp"
 	app.Usage = "Docker dhcp enabled Networking"
 	app.Version = version
 	app.Flags = []cli.Flag{

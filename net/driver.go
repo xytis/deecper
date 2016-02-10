@@ -3,17 +3,17 @@ package plugin
 import (
 	"errors"
 	"fmt"
-	"github.com/docker/libkv/store"
+	driverapi "github.com/docker/go-plugins-helpers/network"
 	"github.com/docker/libnetwork/netlabel"
 	"github.com/vishvananda/netlink"
-	driverapi "github.com/xytis/go-plugins-helpers/network"
+	"github.com/xytis/libkv/store"
 	"strconv"
 
-	. "github.com/xytis/deecper/common"
+	. "github.com/xytis/polyp/common"
 )
 
 const (
-	networkType         = "deecper"
+	networkType         = "polyp"
 	vethPrefix          = "veth"
 	vethLen             = 7
 	containerVethPrefix = "eth"

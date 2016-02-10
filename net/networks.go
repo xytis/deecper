@@ -3,19 +3,19 @@ package plugin
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/docker/libkv/store"
+	driverapi "github.com/docker/go-plugins-helpers/network"
 	"github.com/docker/libnetwork/netlabel"
 	"github.com/docker/libnetwork/types"
 	"github.com/vishvananda/netlink"
-	. "github.com/xytis/deecper/common"
-	driverapi "github.com/xytis/go-plugins-helpers/network"
+	"github.com/xytis/libkv/store"
+	. "github.com/xytis/polyp/common"
 	"net"
 	"strconv"
 	"sync"
 )
 
 func _network(nid string) string {
-	return "deecper/network/" + nid
+	return "polyp/network/" + nid
 }
 
 type networks struct {

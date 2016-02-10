@@ -2,11 +2,11 @@ package plugin
 
 import (
 	"fmt"
+	driverapi "github.com/docker/go-plugins-helpers/network"
 	"github.com/docker/libnetwork/netutils"
 	"github.com/docker/libnetwork/types"
 	"github.com/vishvananda/netlink"
-	. "github.com/xytis/deecper/common"
-	driverapi "github.com/xytis/go-plugins-helpers/network"
+	. "github.com/xytis/polyp/common"
 	"net"
 	"sync"
 )

@@ -1,6 +1,6 @@
 #RUN
 
-go build && sudo ./deecper --log-level debug --scope global --no-ipam
+go build && sudo ./polyp --log-level debug --scope global --no-ipam
 
 #USE
 

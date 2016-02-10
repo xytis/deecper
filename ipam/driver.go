@@ -5,9 +5,9 @@ import (
 	"net"
 	"strings"
 
+	ipamapi "github.com/docker/go-plugins-helpers/ipam"
 	"github.com/docker/libnetwork/netlabel"
-	. "github.com/xytis/deecper/common"
-	ipamapi "github.com/xytis/go-plugins-helpers/ipam"
+	. "github.com/xytis/polyp/common"
 )
 
 const (

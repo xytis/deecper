@@ -1,0 +1,13 @@
+[Unit]
+Description=Docker Network Polyp
+After=docker.service
+Requires=docker.service
+
+[Service]
+Environment=INTERFACE=eth0
+Environment=STORE=consul://127.0.0.1:8500
+EnvironmentFile=-/etc/sysconfig/polyp
+ExecStart=/usr/local/sbin/polyp --interface $INTERFACE --cluster-store $STORE $OPTIONS
+
+[Install]
+WantedBy=multi-user.target
