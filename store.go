@@ -1,10 +1,10 @@
 package main
 
 import (
-	"github.com/xytis/libkv"
-	"github.com/xytis/libkv/store"
-	"github.com/xytis/libkv/store/consul"
-	"github.com/xytis/libkv/store/etcd"
+	"github.com/docker/libkv"
+	"github.com/docker/libkv/store"
+	"github.com/docker/libkv/store/consul"
+	"github.com/docker/libkv/store/etcd"
 	"strings"
 )
 

@@ -4,9 +4,9 @@ import (
 	"errors"
 	"fmt"
 	driverapi "github.com/docker/go-plugins-helpers/network"
+	"github.com/docker/libkv/store"
 	"github.com/docker/libnetwork/netlabel"
 	"github.com/vishvananda/netlink"
-	"github.com/xytis/libkv/store"
 	"strconv"
 
 	. "github.com/xytis/polyp/common"
