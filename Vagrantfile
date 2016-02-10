@@ -9,7 +9,10 @@ Vagrant.configure(2) do |config|
   config.vm.define vm_name = "default" do |config|
     config.vm.box = "centos/7g"
     config.vm.synced_folder "~/Documents/leos/go", "/home/vagrant/go"
-    config.vm.network "private_network", ip: "192.168.72.2"
+    config.vm.network "private_network", ip: "192.168.72.5"
+    config.vm.provider :virtualbox do |vb|
+      vb.customize ["modifyvm", :id, "--memory", "2048"]
+    end
   end
 
   config.vm.define vm_name = "dhcp" do |config|

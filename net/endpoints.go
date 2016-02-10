@@ -29,6 +29,10 @@ func endpointsNew() endpoints {
 	}
 }
 
+func (e *endpoints) length() int {
+	return len(e.store)
+}
+
 func (e *endpoints) create(eid string, ifInfo *driverapi.EndpointInterface, niConfig networkConfig) (err error) {
 	ep := endpoint{}
 

@@ -2,8 +2,12 @@ package plugin
 
 import (
 	"errors"
+	"fmt"
+	"github.com/docker/libkv/store"
 	"github.com/docker/libnetwork/netlabel"
+	"github.com/vishvananda/netlink"
 	driverapi "github.com/xytis/go-plugins-helpers/network"
+	"strconv"
 
 	. "github.com/xytis/deecper/common"
 )
@@ -17,16 +21,22 @@ const (
 
 type driver struct {
 	scope    string
+	store    store.Store
 	networks networks
 }
 
-func NewDriver(scope string) (driverapi.Driver, error) {
-	driver := &driver{
-		scope:    scope,
-		networks: networksNew(),
-	}
+func NewDriver(scope string, iface string, st store.Store) (driverapi.Driver, error) {
+	if li, err := netlink.LinkByName(iface); err != nil {
+		return nil, fmt.Errorf("could not find base interface %s, (%v)", iface, err)
+	} else {
+		driver := &driver{
+			scope:    scope,
+			store:    st,
+			networks: networksNew(li, st),
+		}
 
-	return driver, nil
+		return driver, nil
+	}
 }
 
 func (driver *driver) GetCapabilities() (res *driverapi.CapabilitiesResponse, err error) {
@@ -36,27 +46,35 @@ func (driver *driver) GetCapabilities() (res *driverapi.CapabilitiesResponse, er
 	return
 }
 
-func (driver *driver) CreateNetwork(rq *driverapi.CreateNetworkRequest) error {
+func (driver *driver) CreateNetwork(rq *driverapi.CreateNetworkRequest) (err error) {
 	Log.Debugf("Create network request %s %+v", rq.NetworkID, rq.Options)
 	Log.Debugf("IPAM datas %v | %v", rq.IPv4Data, rq.IPv6Data)
 	var (
 		ifname string
 		brname string
+		number int
 		labels map[string]interface{}
 		ok     bool
 	)
 	if labels, ok = rq.Options[netlabel.GenericData].(map[string]interface{}); !ok {
 		return ErrMissingParameterMap{}
 	}
-	if ifname, ok = labels["iface"].(string); !ok || ifname == "" {
-		return ErrMissingParam("iface")
+	if vlan, ok := labels["vlan"].(string); !ok || vlan == "" {
+		return ErrMissingParam("vlan")
+	} else if number, err = strconv.Atoi(vlan); err != nil {
+		return fmt.Errorf("could not parse %s as an integer (%v)", vlan, err)
 	}
-	if brname, ok = labels["bridge"].(string); !ok {
-		brname = "br_" + ifname
+
+	if ifname, ok = labels["iface"].(string); !ok || ifname == "" {
+		ifname = "vlan" + strconv.Itoa(number)
+	}
+	if brname, ok = labels["bridge"].(string); !ok || brname == "" {
+		brname = "bran" + strconv.Itoa(number)
 	}
 	config := networkConfig{
-		ParentName: ifname,
+		LinkName:   ifname,
 		BridgeName: brname,
+		Vlan:       number,
 		Mtu:        1500, //????
 		EnableIPv6: false,
 	}
@@ -91,6 +109,9 @@ func (driver *driver) CreateEndpoint(rq *driverapi.CreateEndpointRequest) error 
 	if err := ni.endpoints.vacant(rq.EndpointID); err != nil {
 		return err
 	}
+	if err := driver.networks.createLink(ni.config); err != nil {
+		return err
+	}
 
 	return ni.endpoints.create(rq.EndpointID, rq.Interface, ni.config)
 }
@@ -101,7 +122,13 @@ func (driver *driver) DeleteEndpoint(rq *driverapi.DeleteEndpointRequest) error 
 	if err != nil {
 		return err
 	}
-	return ni.endpoints.delete(rq.EndpointID)
+
+	if err = ni.endpoints.delete(rq.EndpointID); err == nil {
+		if ni.endpoints.length() == 0 {
+			err = driver.networks.deleteLink(ni.config)
+		}
+	}
+	return err
 }
 
 func (driver *driver) EndpointInfo(rq *driverapi.InfoRequest) (res *driverapi.InfoResponse, err error) {

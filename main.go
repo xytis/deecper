@@ -31,10 +31,16 @@ func main() {
 		Usage: "Disable Network plugin",
 	}
 
-	var flagScope = cli.StringFlag{
-		Name:  "scope",
-		Value: "global",
-		Usage: "Driver scope",
+	var flagClusterStore = cli.StringFlag{
+		Name:  "cluster-store, s",
+		Value: "consul://127.0.0.1:8500",
+		Usage: "cluster store for shared deecper data",
+	}
+
+	var flagInterface = cli.StringFlag{
+		Name:  "interface, i",
+		Value: "eth0",
+		Usage: "primary interface for vlan binds",
 	}
 
 	app := cli.NewApp()
@@ -45,7 +51,8 @@ func main() {
 		flagLogLevel,
 		flagNoIPAM,
 		flagNoNet,
-		flagScope,
+		flagClusterStore,
+		flagInterface,
 	}
 
 	app.Action = Run
@@ -60,8 +67,14 @@ func Run(ctx *cli.Context) {
 		derr, ierr chan error
 	)
 
+	//Bind to cluster store
+	store, err := NewStore(ctx.String("cluster-store"))
+	if err != nil {
+		panic(err)
+	}
+
 	if !ctx.Bool("no-network") {
-		d, err := dnet.NewDriver(ctx.String("scope"))
+		d, err := dnet.NewDriver("global", ctx.String("interface"), store)
 		if err != nil {
 			panic(err)
 		}
@@ -70,7 +83,7 @@ func Run(ctx *cli.Context) {
 		go func() {
 			derr <- h.ServeUnix("root", "dnet")
 		}()
-		Log.Infof("Running Driver plugin 'dnet'")
+		Log.Infof("Running Driver plugin 'dnet', bound on interface %s", ctx.String("interface"))
 	}
 
 	if !ctx.Bool("no-ipam") {

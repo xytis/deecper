@@ -5,7 +5,6 @@ import (
 	"net"
 	"strings"
 
-	client "github.com/d2g/dhcp4client"
 	"github.com/docker/libnetwork/netlabel"
 	. "github.com/xytis/deecper/common"
 	ipamapi "github.com/xytis/go-plugins-helpers/ipam"
@@ -18,26 +17,28 @@ const (
 )
 
 type ipam struct {
-	client *client.Client
+	//store store.Store
 }
 
 func NewIpam() (ipamapi.Ipam, error) {
-	localAddr := client.SetLocalAddr(net.UDPAddr{IP: net.IPv4(0, 0, 0, 0), Port: 2068})
-	remoteAddr := client.SetRemoteAddr(net.UDPAddr{IP: net.ParseIP("192.168.72.254"), Port: 67})
-	sock, err := client.NewInetSock(
-		localAddr,
-		remoteAddr,
-	)
-	if err != nil {
-		return nil, err
-	}
-	if client, err := client.New(client.Connection(sock)); err != nil {
-		return nil, err
-	} else {
-		return &ipam{
-			client,
-		}, nil
-	}
+
+	/*
+		localAddr := client.SetLocalAddr(net.UDPAddr{IP: net.IPv4(0, 0, 0, 0), Port: 68})
+		remoteAddr := client.SetRemoteAddr(net.UDPAddr{IP: net.ParseIP("192.168.72.254"), Port: 67})
+		sock, err := client.NewInetSock(
+			localAddr,
+			remoteAddr,
+		)
+		if err != nil {
+			return nil, err
+		}
+		if client, err := client.New(client.Connection(sock)); err != nil {
+			return nil, err
+		} else {
+	*/
+	return &ipam{
+	//store,
+	}, nil
 }
 
 func (i *ipam) GetCapabilities() (res *ipamapi.CapabilitiesResponse, err error) {
@@ -60,10 +61,12 @@ func (i *ipam) RequestPool(rq *ipamapi.RequestPoolRequest) (res *ipamapi.Request
 	Log.Debugf("RequestPool %v", rq)
 	defer func() { Log.Debugf("RequestPool returning res: %v, err: %v", res, err) }()
 
-	p, err := i.client.SendDiscoverPacket()
-	Log.Infof("Response: %v, (err: %v)", p, err)
-	o, err := i.client.GetOffer(&p)
-	Log.Infof("Offer: %v, (err: %v)", o, err)
+	/*
+		p, err := i.client.SendDiscoverPacket()
+		Log.Infof("Response: %v, (err: %v)", p, err)
+		o, err := i.client.GetOffer(&p)
+		Log.Infof("Offer: %v, (err: %v)", o, err)
+	*/
 
 	var (
 		subnet, iprange *net.IPNet
