@@ -1,5 +1,4 @@
-GOTOOLS = github.com/mitchellh/gox golang.org/x/tools/cmd/stringer \
-	github.com/jteeuwen/go-bindata/... github.com/elazarl/go-bindata-assetfs/...
+GOTOOLS = github.com/mitchellh/gox
 DEPS = $(shell go list -f '{{range .TestImports}}{{.}} {{end}}' ./...)
 PACKAGES = $(shell go list ./...)
 VETARGS?=-asmdecl -atomic -bool -buildtags -copylocks -methods \

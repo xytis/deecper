@@ -11,8 +11,6 @@ import (
 	dnet "github.com/xytis/polyp/net"
 )
 
-var version = "(unreleased version)"
-
 func main() {
 
 	var flagLogLevel = cli.StringFlag{
@@ -46,7 +44,7 @@ func main() {
 	app := cli.NewApp()
 	app.Name = "polyp"
 	app.Usage = "Docker dhcp enabled Networking"
-	app.Version = version
+	app.Version = Version
 	app.Flags = []cli.Flag{
 		flagLogLevel,
 		flagNoIPAM,
