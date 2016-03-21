@@ -95,25 +95,28 @@ func (driver *driver) DeleteNetwork(rq *driverapi.DeleteNetworkRequest) error {
 	return driver.networks.delete(rq.NetworkID)
 }
 
-func (driver *driver) CreateEndpoint(rq *driverapi.CreateEndpointRequest) error {
+func (driver *driver) CreateEndpoint(rq *driverapi.CreateEndpointRequest) (res *driverapi.CreateEndpointResponse, err error) {
 	Log.Debugf("Create endpoint request %s:%s", rq.NetworkID, rq.EndpointID)
 	if rq.Interface == nil {
-		return errors.New("invalid interface info passed")
+		err = errors.New("invalid interface info passed")
+		return
 	}
 
 	// Get the network handler and make sure it exists
 	ni, err := driver.networks.get(rq.NetworkID)
 	if err != nil {
-		return err
+		return
 	}
-	if err := ni.endpoints.vacant(rq.EndpointID); err != nil {
-		return err
+	if err = ni.endpoints.vacant(rq.EndpointID); err != nil {
+		return
 	}
-	if err := driver.networks.createLink(ni.config); err != nil {
-		return err
+	if err = driver.networks.createLink(ni.config); err != nil {
+		return
 	}
 
-	return ni.endpoints.create(rq.EndpointID, rq.Interface, ni.config)
+	err = ni.endpoints.create(rq.EndpointID, rq.Interface, ni.config)
+	res.Interface = rq.Interface
+	return
 }
 
 func (driver *driver) DeleteEndpoint(rq *driverapi.DeleteEndpointRequest) error {
@@ -160,6 +163,18 @@ func (driver *driver) Join(rq *driverapi.JoinRequest) (res *driverapi.JoinRespon
 
 func (driver *driver) Leave(rq *driverapi.LeaveRequest) error {
 	Log.Debugf("Leave requested %s:%s", rq.NetworkID, rq.EndpointID)
+
+	return nil
+}
+
+func (driver *driver) DiscoverNew(rq *driverapi.DiscoveryNotification) error {
+	Log.Debugf("DiscoverNew requested %d:%v", rq.DiscoveryType, rq.DiscoveryData)
+
+	return nil
+}
+
+func (driver *driver) DiscoverDelete(rq *driverapi.DiscoveryNotification) error {
+	Log.Debugf("DiscoverDelete requested %d:%v", rq.DiscoveryType, rq.DiscoveryData)
 
 	return nil
 }
