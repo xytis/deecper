@@ -97,6 +97,7 @@ func (driver *driver) DeleteNetwork(rq *driverapi.DeleteNetworkRequest) error {
 
 func (driver *driver) CreateEndpoint(rq *driverapi.CreateEndpointRequest) (res *driverapi.CreateEndpointResponse, err error) {
 	Log.Debugf("Create endpoint request %s:%s", rq.NetworkID, rq.EndpointID)
+	defer func() { Log.Debugf("Create endpoint response: res: %v, err: %v", res, err) }()
 	if rq.Interface == nil {
 		err = errors.New("invalid interface info passed")
 		return
@@ -115,7 +116,9 @@ func (driver *driver) CreateEndpoint(rq *driverapi.CreateEndpointRequest) (res *
 	}
 
 	err = ni.endpoints.create(rq.EndpointID, rq.Interface, ni.config)
-	res.Interface = rq.Interface
+	res = &driverapi.CreateEndpointResponse{
+		Interface: nil,
+	}
 	return
 }
 

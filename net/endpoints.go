@@ -6,6 +6,7 @@ import (
 	"github.com/docker/libnetwork/netutils"
 	"github.com/docker/libnetwork/types"
 	"github.com/vishvananda/netlink"
+	"github.com/xytis/arp"
 	. "github.com/xytis/polyp/common"
 	"net"
 	"sync"
@@ -13,9 +14,26 @@ import (
 
 type endpoint struct {
 	ifname string
-	addr   *net.IPNet
-	addrv6 *net.IPNet
+	addr   net.IP
+	addrv6 net.IP
 	mac    net.HardwareAddr
+}
+
+//Perform RARP reassign
+func broadcastChange(li netlink.Link, en endpoint) error {
+	cif, err := net.InterfaceByIndex(li.Attrs().Index)
+	if err != nil {
+		return fmt.Errorf("could not rediscover interface by index %d (%s): %v", li.Attrs().Index, li.Attrs().Name, err)
+	}
+	carp, err := arp.NewClient(cif)
+	if err != nil {
+		return fmt.Errorf("could not bind arp client to interface %s: %v", li.Attrs().Name, err)
+	}
+	//Broadcast change of ip mac pair
+	Log.Infof("Doing broadcast for ip: %v, mac: %v", en.addr, en.mac)
+	defer carp.Close()
+
+	return carp.BroadcastChange(en.addr, en.mac)
 }
 
 type endpoints struct {
@@ -51,7 +69,8 @@ func (e *endpoints) create(eid string, ifInfo *driverapi.EndpointInterface, niCo
 	// Generate and add the interface pipe host <-> sandbox
 	veth := &netlink.Veth{
 		LinkAttrs: netlink.LinkAttrs{Name: hostIfName, TxQLen: 0},
-		PeerName:  containerIfName}
+		PeerName:  containerIfName,
+	}
 	if err = netlink.LinkAdd(veth); err != nil {
 		return types.InternalErrorf("failed to add the host (%s) <=> sandbox (%s) pair interfaces: %v", hostIfName, containerIfName, err)
 	}
@@ -101,7 +120,7 @@ func (e *endpoints) create(eid string, ifInfo *driverapi.EndpointInterface, niCo
 
 	// Create the sandbox side pipe interface
 	ep.ifname = containerIfName
-	_, ep.addr, err = net.ParseCIDR(ifInfo.Address)
+	ep.addr, _, err = net.ParseCIDR(ifInfo.Address)
 	if err != nil {
 		return fmt.Errorf("ipv4 adress unparseable")
 	}
@@ -126,6 +145,13 @@ func (e *endpoints) create(eid string, ifInfo *driverapi.EndpointInterface, niCo
 		if err != nil {
 			return fmt.Errorf("could not set mac address for container interface %s: %v", containerIfName, err)
 		}
+
+		if err = netlink.LinkSetUp(sbox); err != nil {
+			return fmt.Errorf("could not set link up for container interface %s: %v", containerIfName, err)
+		}
+	} else {
+		// Get existing mac address from interface
+		ep.mac = sbox.Attrs().HardwareAddr
 	}
 
 	// Up the host interface after finishing all netlink configuration
@@ -138,6 +164,10 @@ func (e *endpoints) create(eid string, ifInfo *driverapi.EndpointInterface, niCo
 	}
 
 	e.add(eid, ep)
+
+	Log.Debugf("ep data at join: ip: %v, mac: %v", ep.addr, ep.mac)
+	broadcastChange(br, ep)
+
 	return nil
 }
 

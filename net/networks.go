@@ -177,7 +177,7 @@ func (n *networks) addLocal(nid string, network network) error {
 	go func() {
 		stop := make(chan struct{})
 		defer close(stop)
-		Log.Errorf("Binding watcher for %s", nid)
+		Log.Debugf("Binding watcher for %s", nid)
 		events, err := n.shared.Watch(_network(nid), stop)
 		if err != nil {
 			Log.Errorf("Could not watch for %s, %v", nid, err)
