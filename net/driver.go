@@ -40,6 +40,8 @@ func NewDriver(scope string, iface string, st store.Store) (driverapi.Driver, er
 }
 
 func (driver *driver) GetCapabilities() (res *driverapi.CapabilitiesResponse, err error) {
+	Log.Debugf("Capabilites request")
+	defer func() { Log.Debugf("Capabilites response %v (%v)", res, err) }()
 	res = &driverapi.CapabilitiesResponse{
 		Scope: driver.scope,
 	}
@@ -48,6 +50,7 @@ func (driver *driver) GetCapabilities() (res *driverapi.CapabilitiesResponse, er
 
 func (driver *driver) CreateNetwork(rq *driverapi.CreateNetworkRequest) (err error) {
 	Log.Debugf("Create network request %s %+v", rq.NetworkID, rq.Options)
+	defer func() { Log.Debugf("Create network response (%v)", err) }()
 	Log.Debugf("IPAM datas %v | %v", rq.IPv4Data, rq.IPv6Data)
 	var (
 		ifname string
@@ -90,14 +93,16 @@ func (driver *driver) CreateNetwork(rq *driverapi.CreateNetworkRequest) (err err
 	return driver.networks.create(rq.NetworkID, config)
 }
 
-func (driver *driver) DeleteNetwork(rq *driverapi.DeleteNetworkRequest) error {
+func (driver *driver) DeleteNetwork(rq *driverapi.DeleteNetworkRequest) (err error) {
 	Log.Debugf("Delete network request %s", rq.NetworkID)
-	return driver.networks.delete(rq.NetworkID)
+	defer func() { Log.Debugf("Delete network response (%v)", err) }()
+	err = driver.networks.delete(rq.NetworkID)
+	return
 }
 
 func (driver *driver) CreateEndpoint(rq *driverapi.CreateEndpointRequest) (res *driverapi.CreateEndpointResponse, err error) {
 	Log.Debugf("Create endpoint request %s:%s", rq.NetworkID, rq.EndpointID)
-	defer func() { Log.Debugf("Create endpoint response: res: %v, err: %v", res, err) }()
+	defer func() { Log.Debugf("Create endpoint response %v (%v)", res, err) }()
 	if rq.Interface == nil {
 		err = errors.New("invalid interface info passed")
 		return
@@ -122,8 +127,9 @@ func (driver *driver) CreateEndpoint(rq *driverapi.CreateEndpointRequest) (res *
 	return
 }
 
-func (driver *driver) DeleteEndpoint(rq *driverapi.DeleteEndpointRequest) error {
+func (driver *driver) DeleteEndpoint(rq *driverapi.DeleteEndpointRequest) (err error) {
 	Log.Debugf("Delete endpoint request %s:%s", rq.NetworkID, rq.EndpointID)
+	defer func() { Log.Debugf("Delete endpoint response (%v)", err) }()
 	ni, err := driver.networks.get(rq.NetworkID)
 	if err != nil {
 		return err
@@ -139,12 +145,14 @@ func (driver *driver) DeleteEndpoint(rq *driverapi.DeleteEndpointRequest) error 
 
 func (driver *driver) EndpointInfo(rq *driverapi.InfoRequest) (res *driverapi.InfoResponse, err error) {
 	Log.Debugf("Info requested %s:%s", rq.NetworkID, rq.EndpointID)
+	defer func() { Log.Debugf("Info response %v (%v)", res, err) }()
+	res = &driverapi.InfoResponse{}
 	return
 }
 
 func (driver *driver) Join(rq *driverapi.JoinRequest) (res *driverapi.JoinResponse, err error) {
 	Log.Debugf("Join requested %s:%s, sbox:%s", rq.NetworkID, rq.EndpointID, rq.SandboxKey)
-	defer func() { Log.Debugf("Join response: res: %v, err: %v", res, err) }()
+	defer func() { Log.Debugf("Join response %v (%v)", res, err) }()
 
 	ni, err := driver.networks.get(rq.NetworkID)
 	if err != nil {
@@ -164,20 +172,20 @@ func (driver *driver) Join(rq *driverapi.JoinRequest) (res *driverapi.JoinRespon
 	return
 }
 
-func (driver *driver) Leave(rq *driverapi.LeaveRequest) error {
+func (driver *driver) Leave(rq *driverapi.LeaveRequest) (err error) {
 	Log.Debugf("Leave requested %s:%s", rq.NetworkID, rq.EndpointID)
-
-	return nil
+	defer func() { Log.Debugf("Leave response (%v)", err) }()
+	return err
 }
 
-func (driver *driver) DiscoverNew(rq *driverapi.DiscoveryNotification) error {
+func (driver *driver) DiscoverNew(rq *driverapi.DiscoveryNotification) (err error) {
 	Log.Debugf("DiscoverNew requested %d:%v", rq.DiscoveryType, rq.DiscoveryData)
-
-	return nil
+	defer func() { Log.Debugf("DiscoverNew response (%v)", err) }()
+	return err
 }
 
-func (driver *driver) DiscoverDelete(rq *driverapi.DiscoveryNotification) error {
+func (driver *driver) DiscoverDelete(rq *driverapi.DiscoveryNotification) (err error) {
 	Log.Debugf("DiscoverDelete requested %d:%v", rq.DiscoveryType, rq.DiscoveryData)
-
-	return nil
+	defer func() { Log.Debugf("DiscoverDelete response (%v)", err) }()
+	return err
 }
