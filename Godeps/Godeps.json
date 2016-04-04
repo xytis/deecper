@@ -1,0 +1,155 @@
+{
+	"ImportPath": "github.com/xytis/polyp",
+	"GoVersion": "go1.6",
+	"GodepVersion": "v60",
+	"Deps": [
+		{
+			"ImportPath": "github.com/Microsoft/go-winio",
+			"Comment": "v0.2.0",
+			"Rev": "9e2895e5f6c3f16473b91d37fae6e89990a4520c"
+		},
+		{
+			"ImportPath": "github.com/Sirupsen/logrus",
+			"Comment": "v0.9.0-15-g219c8cb",
+			"Rev": "219c8cb75c258c552e999735be6df753ffc7afdc"
+		},
+		{
+			"ImportPath": "github.com/codegangsta/cli",
+			"Comment": "1.2.0-224-gaca5b04",
+			"Rev": "aca5b047ed14d17224157c3434ea93bf6cdaadee"
+		},
+		{
+			"ImportPath": "github.com/coreos/etcd/Godeps/_workspace/src/github.com/ugorji/go/codec",
+			"Comment": "v2.3.0-alpha.1-225-g570775f",
+			"Rev": "570775fe612d180dc67ea989ff2e448c05d1a456"
+		},
+		{
+			"ImportPath": "github.com/coreos/etcd/Godeps/_workspace/src/golang.org/x/net/context",
+			"Comment": "v2.3.0-alpha.1-225-g570775f",
+			"Rev": "570775fe612d180dc67ea989ff2e448c05d1a456"
+		},
+		{
+			"ImportPath": "github.com/coreos/etcd/client",
+			"Comment": "v2.3.0-alpha.1-225-g570775f",
+			"Rev": "570775fe612d180dc67ea989ff2e448c05d1a456"
+		},
+		{
+			"ImportPath": "github.com/coreos/etcd/pkg/pathutil",
+			"Comment": "v2.3.0-alpha.1-225-g570775f",
+			"Rev": "570775fe612d180dc67ea989ff2e448c05d1a456"
+		},
+		{
+			"ImportPath": "github.com/coreos/etcd/pkg/types",
+			"Comment": "v2.3.0-alpha.1-225-g570775f",
+			"Rev": "570775fe612d180dc67ea989ff2e448c05d1a456"
+		},
+		{
+			"ImportPath": "github.com/coreos/go-systemd/activation",
+			"Comment": "v4-42-g7b2428f",
+			"Rev": "7b2428fec40033549c68f54e26e89e7ca9a9ce31"
+		},
+		{
+			"ImportPath": "github.com/docker/go-connections/sockets",
+			"Comment": "v0.2.0-2-gf549a93",
+			"Rev": "f549a9393d05688dff0992ef3efd8bbe6c628aeb"
+		},
+		{
+			"ImportPath": "github.com/docker/go-plugins-helpers/ipam",
+			"Rev": "c9f224a041e794bd398347a837c6406313ce9511"
+		},
+		{
+			"ImportPath": "github.com/docker/go-plugins-helpers/network",
+			"Rev": "c9f224a041e794bd398347a837c6406313ce9511"
+		},
+		{
+			"ImportPath": "github.com/docker/go-plugins-helpers/sdk",
+			"Rev": "c9f224a041e794bd398347a837c6406313ce9511"
+		},
+		{
+			"ImportPath": "github.com/docker/libkv",
+			"Comment": "v0.1.0-11-ge1a1be6",
+			"Rev": "e1a1be6e861f7f4c5d046139af809e1f9f6b93db"
+		},
+		{
+			"ImportPath": "github.com/docker/libkv/store",
+			"Comment": "v0.1.0-11-ge1a1be6",
+			"Rev": "e1a1be6e861f7f4c5d046139af809e1f9f6b93db"
+		},
+		{
+			"ImportPath": "github.com/docker/libkv/store/consul",
+			"Comment": "v0.1.0-11-ge1a1be6",
+			"Rev": "e1a1be6e861f7f4c5d046139af809e1f9f6b93db"
+		},
+		{
+			"ImportPath": "github.com/docker/libkv/store/etcd",
+			"Comment": "v0.1.0-11-ge1a1be6",
+			"Rev": "e1a1be6e861f7f4c5d046139af809e1f9f6b93db"
+		},
+		{
+			"ImportPath": "github.com/docker/libnetwork/netlabel",
+			"Comment": "v0.7.0-dev.4-1-g8ddda93",
+			"Rev": "8ddda93a5ab8b30ada34bcf0a3397ae38baa8aec"
+		},
+		{
+			"ImportPath": "github.com/docker/libnetwork/netutils",
+			"Comment": "v0.7.0-dev.4-1-g8ddda93",
+			"Rev": "8ddda93a5ab8b30ada34bcf0a3397ae38baa8aec"
+		},
+		{
+			"ImportPath": "github.com/docker/libnetwork/types",
+			"Comment": "v0.7.0-dev.4-1-g8ddda93",
+			"Rev": "8ddda93a5ab8b30ada34bcf0a3397ae38baa8aec"
+		},
+		{
+			"ImportPath": "github.com/hashicorp/consul/api",
+			"Comment": "v0.6.3-210-g98784c6",
+			"Rev": "98784c6416bb16b87f4798b498ab03a2cbe152cc"
+		},
+		{
+			"ImportPath": "github.com/hashicorp/go-cleanhttp",
+			"Rev": "875fb671b3ddc66f8e2f0acc33829c8cb989a38d"
+		},
+		{
+			"ImportPath": "github.com/hashicorp/serf/coordinate",
+			"Comment": "v0.7.0-39-g315670d",
+			"Rev": "315670dfa7a1cb49ba0d8d4cbcc7dbac1d5ebaee"
+		},
+		{
+			"ImportPath": "github.com/mdlayher/ethernet",
+			"Rev": "28018267bba4d651e8e0fcbca8aae7c13f4ce4ae"
+		},
+		{
+			"ImportPath": "github.com/mdlayher/raw",
+			"Rev": "cb5e087c798a9e04245bda0846d7982464e6dc22"
+		},
+		{
+			"ImportPath": "github.com/opencontainers/runc/libcontainer/user",
+			"Comment": "v0.0.8-117-g7b6c4c4",
+			"Rev": "7b6c4c418d5090f4f11eee949fdf49afd15838c9"
+		},
+		{
+			"ImportPath": "github.com/vishvananda/netlink",
+			"Rev": "5a5eb317d73bc513ae0cfea7d9ac3c39f145e1db"
+		},
+		{
+			"ImportPath": "github.com/vishvananda/netlink/nl",
+			"Rev": "5a5eb317d73bc513ae0cfea7d9ac3c39f145e1db"
+		},
+		{
+			"ImportPath": "github.com/xytis/arp",
+			"Rev": "28e7a0aa9bddaf4af0dfed48db9d7dc62b2d9412"
+		},
+		{
+			"ImportPath": "golang.org/x/net/context",
+			"Rev": "a4bbce9fcae005b22ae5443f6af064d80a6f5a55"
+		},
+		{
+			"ImportPath": "golang.org/x/net/proxy",
+			"Rev": "a4bbce9fcae005b22ae5443f6af064d80a6f5a55"
+		},
+		{
+			"ImportPath": "golang.org/x/sys/unix",
+			"Rev": "7a56174f0086b32866ebd746a794417edbc678a1"
+		}
+	]
+}
